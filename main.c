@@ -6,7 +6,7 @@
 /*   By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/08 03:06:53 by asarandi          #+#    #+#             */
-/*   Updated: 2018/03/10 08:56:44 by asarandi         ###   ########.fr       */
+/*   Updated: 2018/03/10 11:00:08 by asarandi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,6 +53,14 @@ typedef struct	s_fdf
 	void	*win;
 	int		color;
 	int		unit;
+	int		bump;
+
+	int		pal_i;
+	int		pal_j;
+	int		disco;
+	int		tick;
+
+//	int		pal_size = sizeof(palette) / sizeof(int);
 
 	t_coord	o;
 	t_coord	x;
@@ -60,7 +68,14 @@ typedef struct	s_fdf
 	t_coord	z;
 }				t_fdf;
 
+int		get_palette_index(int index)
+{
+	int		palette[] = {0x001F3F, 0x0074D9, 0x7FDBFF, 0x39CCCC, 0x3D9970, 0x2ECC40, 0x01FF70, 0xFFDC00, 0xFF851B, 0xFF4136, 0xF012BE, 0xB10DC9, 0x85144B, 0xFFFFFF, 0xDDDDDD, 0xAAAAAA};
+	int		pal_size = sizeof(palette) / sizeof(int);
 
+	index = index % pal_size;
+	return (palette[index]);
+}
 
 void	plot_line_low(t_fdf *fdf, t_line line)
 {
@@ -186,8 +201,8 @@ void	draw_x_axis(t_fdf *fdf)
 	line.color = 0xff0000;
 	line.o.x = fdf->o.x;
 	line.o.y = fdf->o.y;
-	line.d.x = fdf->x.x;
-	line.d.y = fdf->x.y;
+	line.d.x = fdf->o.x + WIDTH / 2;
+	line.d.y = fdf->o.y;
 	plot_line(fdf, line);
 	return ;
 }
@@ -198,8 +213,8 @@ void	draw_y_axis(t_fdf *fdf)
 	line.color = 0xff00;
 	line.o.x = fdf->o.x;
 	line.o.y = fdf->o.y;
-	line.d.x = fdf->y.x;
-	line.d.y = fdf->y.y;
+	line.d.x = fdf->o.x - WIDTH / 2;
+	line.d.y = fdf->o.y + HEIGHT / 2;
 	plot_line(fdf, line);
 	return ;
 }
@@ -210,8 +225,8 @@ void	draw_z_axis(t_fdf *fdf)
 	line.color = 0xff;
 	line.o.x = fdf->o.x;
 	line.o.y = fdf->o.y;
-	line.d.x = fdf->z.x;
-	line.d.y = fdf->z.y;
+	line.d.x = fdf->o.x;
+	line.d.y = fdf->o.y - HEIGHT / 2;
 	plot_line(fdf, line);
 	return ;
 }
@@ -230,7 +245,7 @@ void	draw_matrix(t_fdf *fdf)
 	int		unit;
 //	int		tmp;
 
-	line.color = 0xffffff;//0xffff00;
+	line.color = get_palette_index(fdf->pal_i);//0x0074d9;//0xffff00;
 	i = 0;
 	unit = fdf->unit;
 //	unit = 10;
@@ -239,7 +254,6 @@ void	draw_matrix(t_fdf *fdf)
 	c.y = fdf->o.y;
 	b = c;
 //	int tmp;
-#define BUMP 17
 	while (i < fdf->rows)
 	{
 		j = 0;
@@ -250,13 +264,13 @@ void	draw_matrix(t_fdf *fdf)
 
 			line.o = c;
 			line.o.y = fdf->o.y + ((unit / 2) * i); 
-			line.o.y -= (fdf->matrix[i * fdf->columns + j]) * BUMP;
+			line.o.y -= (fdf->matrix[i * fdf->columns + j]) * fdf->bump;
 
 
 			line.d.x = c.x + unit;
 			line.d.y = fdf->o.y + ((unit / 2) * i);
 
-			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * BUMP;
+			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * fdf->bump;
 			plot_line(fdf, line);
 
 			c = line.d;
@@ -267,7 +281,7 @@ void	draw_matrix(t_fdf *fdf)
 	}
 
 	i = 0;
-	line.color = 0x999999;
+	line.color = get_palette_index(fdf->pal_j);
 	c.x = fdf->o.x;
 	c.y = fdf->o.y;
 	b = c;
@@ -284,8 +298,8 @@ void	draw_matrix(t_fdf *fdf)
 			line.d.x = c.x - (unit / 2);
 //			line.d.x += (fdf->matrix[i * fdf->rows + j]) * 3;
 			line.d.y = c.y + (unit / 2); // + (j * unit);
-			line.o.y -= (fdf->matrix[i + (fdf->columns * j )]) * BUMP;
-			line.d.y -= (fdf->matrix[i + (fdf->columns * (j + 1))]) * BUMP;
+			line.o.y -= (fdf->matrix[i + (fdf->columns * j )]) * fdf->bump;
+			line.d.y -= (fdf->matrix[i + (fdf->columns * (j + 1))]) * fdf->bump;
 
 			plot_line(fdf, line);
 
@@ -332,6 +346,9 @@ void	init_coordinates(t_fdf *fdf)
 	fdf->z.x = fdf->o.x;
 	fdf->z.y = fdf->o.y - (HEIGHT / 2);
 	fdf->unit = 10;
+	fdf->bump = 17;
+	fdf->pal_i = 1;
+	fdf->pal_j = 8;
 }
 
 
@@ -355,18 +372,34 @@ void fatal_error(char *msg)
 
 int	expose_hook(t_fdf *fdf)
 {
+	draw_matrix(fdf);
 	ft_printf("*mlx = %j, *win = %j\n", fdf->mlx, fdf->win);
 	ft_printf("expose_hook() called\n");
 	return (0);
 }
 
+void	redraw(t_fdf *fdf)
+{
+	(void)mlx_clear_window(fdf->mlx, fdf->win);
+	draw_matrix(fdf);
+}
+
 void	zoom_redraw(t_fdf *fdf, int value)
 {
 	fdf->unit += value;
-		(void)mlx_clear_window(fdf->mlx, fdf->win);
-		draw_matrix(fdf);
+	redraw(fdf);
+}
 
+void	bump_redraw(t_fdf *fdf, int value)
+{
+	fdf->bump += value;
+	redraw(fdf);
+}
 
+void	palette_redraw(t_fdf *fdf, int *index)
+{
+	(*index) += 1;
+	redraw(fdf);
 }
 
 int	key_hook(int keycode, t_fdf *fdf)
@@ -393,6 +426,19 @@ int	key_hook(int keycode, t_fdf *fdf)
 		zoom_redraw(fdf, 1);
 	if (keycode == KEY_O)
 		zoom_redraw(fdf, -1);
+	if (keycode == KEY_J)
+		bump_redraw(fdf, 1);
+	if (keycode == KEY_K)
+		bump_redraw(fdf, -1);
+	if (keycode == KEY_Z)
+		palette_redraw(fdf, &(fdf->pal_i));
+	if (keycode == KEY_X)
+		palette_redraw(fdf, &(fdf->pal_j));
+	if (keycode == KEY_D)
+		fdf->disco ^= 1;
+
+
+
 
 
 	if (keycode == KEY_0)
@@ -433,8 +479,23 @@ int	mouse_hook(int button, int x, int y, t_fdf *fdf)
 
 int	loop_hook(t_fdf *fdf)
 {
-	if (fdf->color == 0x112233)	//spaghetti
-		ft_printf("*mlx = %j, *win = %j\n", fdf->mlx, fdf->win);
+//	if (fdf->color == 0x112233)	//spaghetti
+//		ft_printf("*mlx = %j, *win = %j\n", fdf->mlx, fdf->win);
+
+	if (fdf->disco == 1)
+	{
+		fdf->tick += 1;
+		if (fdf->tick % 4181 == 0)
+		{
+			fdf->pal_i += 1;
+			redraw(fdf);
+		}
+		if (fdf->tick % 6765 == 0)
+		{
+			fdf->pal_j += 1;
+			redraw(fdf);
+		}
+	}
 
 //	ft_printf("loop_hook() called\n");
 	return (0);
@@ -583,8 +644,12 @@ int	main(int ac, char **av)
 	(void)init_coordinates(fdf);
 	if ((fdf->mlx = mlx_init()) == NULL)
 		fatal_error("mlx_init() failed");
+	mlx_do_key_autorepeatoff(fdf->mlx);
+//	mlx_do_sync(fdf->mlx);
+
 	if ((fdf->win = mlx_new_window(fdf->mlx, WIDTH, HEIGHT, TITLE)) == NULL)
 		fatal_error("mlx_new_window() failed");
+
 	(void)mlx_key_hook(fdf->win, key_hook, fdf);
 	(void)mlx_mouse_hook(fdf->win, mouse_hook, fdf);
 	(void)mlx_expose_hook(fdf->win, expose_hook, fdf);

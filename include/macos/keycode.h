@@ -13,6 +13,11 @@
 
 # define KEY_I		34
 # define KEY_O		31
+# define KEY_J		38
+# define KEY_K		40
+# define KEY_Z		6
+# define KEY_X		7
+# define KEY_D		2
 
 # define KEY_1		18
 # define KEY_2		19

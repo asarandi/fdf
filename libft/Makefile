@@ -6,12 +6,12 @@
 #    By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2017/09/20 17:41:00 by asarandi          #+#    #+#              #
-#    Updated: 2018/03/08 23:03:58 by asarandi         ###   ########.fr        #
+#    Updated: 2018/03/10 09:47:42 by asarandi         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME		= libft.a
-CFLAGS		= -Wall -Werror -Wextra -I.
+CFLAGS		= -Ofast -Wall -Werror -Wextra -I.
 FILES		=	ft_atoi.c \
 				ft_base64encode.c \
 				ft_bzero.c \

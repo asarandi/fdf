@@ -2,7 +2,7 @@ NAME	= fdf
 SRC		= main.c
 OBJ		= $(SRC:%.c=%.o)
 CC		= gcc
-FLAGS	= -Wall -Werror -Wextra -g
+FLAGS	= -Wall -Werror -Wextra -Ofast
 INC		= -I libft/ -I libft/ft_printf/
 LIB		= -L libft/ -lft
 

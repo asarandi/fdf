@@ -6,12 +6,12 @@
 #    By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2017/10/30 09:00:12 by asarandi          #+#    #+#              #
-#    Updated: 2018/01/31 04:15:54 by asarandi         ###   ########.fr        #
+#    Updated: 2018/03/10 09:48:41 by asarandi         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	= libftprintf.a
-CFLAGS	=  -Wall -Werror -Wextra -I. -c
+CFLAGS	= -Ofast -Wall -Werror -Wextra -I. -c
 FILES	=	add_precision.c \
 			add_width.c \
 			format_ioux.c \
