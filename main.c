@@ -6,7 +6,7 @@
 /*   By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/08 03:06:53 by asarandi          #+#    #+#             */
-/*   Updated: 2018/03/09 11:50:50 by asarandi         ###   ########.fr       */
+/*   Updated: 2018/03/10 08:56:44 by asarandi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,7 @@ typedef struct	s_fdf
 	void	*mlx;
 	void	*win;
 	int		color;
+	int		unit;
 
 	t_coord	o;
 	t_coord	x;
@@ -97,7 +98,7 @@ void	plot_line_low(t_fdf *fdf, t_line line)
 		d += 2 * dy;
 		x++;
 	}
-	ft_printf("plot line low index %d\n", index);
+//	ft_printf("plot line low index %d\n", index);
 	return ;
 }
 
@@ -137,7 +138,7 @@ void	plot_line_high(t_fdf *fdf, t_line line)
 		d += 2 * dx;
 		y++;
 	}
-	ft_printf("plot line high index %d\n", index);
+//	ft_printf("plot line high index %d\n", index);
 	return ;
 }
 
@@ -219,20 +220,118 @@ void	draw_z_axis(t_fdf *fdf)
 
 
 
+void	draw_matrix(t_fdf *fdf)
+{
+	t_line	line;
+	int		i;
+	int		j;
+	t_coord	c;
+	t_coord b;
+	int		unit;
+//	int		tmp;
+
+	line.color = 0xffffff;//0xffff00;
+	i = 0;
+	unit = fdf->unit;
+//	unit = 10;
+
+	c.x = fdf->o.x;
+	c.y = fdf->o.y;
+	b = c;
+//	int tmp;
+#define BUMP 17
+	while (i < fdf->rows)
+	{
+		j = 0;
+		while (j < fdf->columns - 1)
+		{
+//			ft_printf("RUN 1#  i = %d, j = %d, matrix[i][j] = %d\n", i, j, fdf->matrix[i * fdf->columns + j]);
+
+
+			line.o = c;
+			line.o.y = fdf->o.y + ((unit / 2) * i); 
+			line.o.y -= (fdf->matrix[i * fdf->columns + j]) * BUMP;
+
+
+			line.d.x = c.x + unit;
+			line.d.y = fdf->o.y + ((unit / 2) * i);
+
+			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * BUMP;
+			plot_line(fdf, line);
+
+			c = line.d;
+			j++;
+		}
+		i++;
+		c.x = fdf->o.x - ((unit / 2) * i);
+	}
+
+	i = 0;
+	line.color = 0x999999;
+	c.x = fdf->o.x;
+	c.y = fdf->o.y;
+	b = c;
+	while (i < fdf->columns)
+	{
+		j = 0;
+		while (j < fdf->rows - 1)
+		{
+//			ft_printf("RUN 2#  i = %d, j = %d, matrix[i][j] = %d\n", i, j, fdf->matrix[i + (fdf->columns * j)]);
+
+		
+			line.o = c;
+			
+			line.d.x = c.x - (unit / 2);
+//			line.d.x += (fdf->matrix[i * fdf->rows + j]) * 3;
+			line.d.y = c.y + (unit / 2); // + (j * unit);
+			line.o.y -= (fdf->matrix[i + (fdf->columns * j )]) * BUMP;
+			line.d.y -= (fdf->matrix[i + (fdf->columns * (j + 1))]) * BUMP;
+
+			plot_line(fdf, line);
+
+			line.d.y = c.y + (unit / 2); 
+//			(void)mlx_pixel_put(fdf->mlx, fdf->win, line.d.x, line.d.y, 0xff0000);
+//			b.x -= (unit / 2);
+
+			c = line.d;
+			j++;
+		}
+		i++;
+
+
+//		line.o = b;
+//		line.d.x = fdf->o.x - ((unit / 2) * i);
+//		line.d.y = fdf->o.y + ((unit / 2) * i);
+//		plot_line(fdf, line);
+//		b = line.d;
+		c.x = fdf->o.x + (unit * i);
+		c.y = fdf->o.y;// + ((unit / 2) * i);
+
+	}
+
+
+
+
+
+
+	return ;
+}
+
 
 void	init_coordinates(t_fdf *fdf)
 {
-	fdf->o.x = WIDTH / 2;
-	fdf->o.y = HEIGHT / 2;
+	fdf->o.x = WIDTH / 4;
+	fdf->o.y = HEIGHT / 4;
 
 	fdf->x.x = fdf->o.x + (WIDTH / 2);
-	fdf->x.y = fdf->o.y + (HEIGHT / 2);
+	fdf->x.y = fdf->o.y; // + (HEIGHT / 2);
 
 	fdf->y.x = fdf->o.x - (WIDTH / 2);
 	fdf->y.y = fdf->o.y + (HEIGHT / 2);
 
 	fdf->z.x = fdf->o.x;
 	fdf->z.y = fdf->o.y - (HEIGHT / 2);
+	fdf->unit = 10;
 }
 
 
@@ -261,6 +360,15 @@ int	expose_hook(t_fdf *fdf)
 	return (0);
 }
 
+void	zoom_redraw(t_fdf *fdf, int value)
+{
+	fdf->unit += value;
+		(void)mlx_clear_window(fdf->mlx, fdf->win);
+		draw_matrix(fdf);
+
+
+}
+
 int	key_hook(int keycode, t_fdf *fdf)
 {
 	ft_printf("key_hook() called, keycode = %d\n", keycode);
@@ -278,10 +386,13 @@ int	key_hook(int keycode, t_fdf *fdf)
 		draw_y_axis(fdf);
 	if (keycode == KEY_6)
 		draw_z_axis(fdf);
+	if (keycode == KEY_9)
+		draw_matrix(fdf);
 
-
-
-
+	if (keycode == KEY_I)
+		zoom_redraw(fdf, 1);
+	if (keycode == KEY_O)
+		zoom_redraw(fdf, -1);
 
 
 	if (keycode == KEY_0)
@@ -300,7 +411,23 @@ int	key_hook(int keycode, t_fdf *fdf)
 int	mouse_hook(int button, int x, int y, t_fdf *fdf)
 {
 	(void)mlx_pixel_put(fdf->mlx, fdf->win, x, y, fdf->color);
-	ft_printf("mouse_hook() called, button = %d, x = %d, y = %d\n", button, x, y);
+//	ft_printf("mouse_hook() called, button = %d, x = %d, y = %d\n", button, x, y);
+	if (button == 1)
+	{
+		fdf->o.x = x;
+		fdf->o.y = y;
+
+		(void)mlx_clear_window(fdf->mlx, fdf->win);
+		draw_matrix(fdf);
+
+	}
+	else if (button == 4)
+		zoom_redraw(fdf, 1);
+	else if (button == 5)
+		zoom_redraw(fdf, -1);
+
+
+
 	return (0);
 }
 
