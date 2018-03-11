@@ -11,6 +11,17 @@
 # define KEY_SPACE	32
 # define KEY_TAB	65289
 
+# define KEY_I		105
+# define KEY_O		111
+# define KEY_J		106
+# define KEY_K		107
+# define KEY_Z		122
+# define KEY_X		120
+# define KEY_D		100
+# define KEY_T		116
+# define KEY_Y		121
+
+
 # define KEY_1		49
 # define KEY_2		50
 # define KEY_3		51

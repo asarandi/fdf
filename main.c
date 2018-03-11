@@ -10,10 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <stdio.h>
 #include "fdf.h"
 
-#define HEIGHT				720
-#define WIDTH				1280
+#define HEIGHT				768
+#define WIDTH				1366
 #define TITLE				"fdf @ 42"
 #define INT_SEPARATOR		' '
 #define	COLOR_SEPARATOR		','
@@ -52,8 +53,10 @@ typedef struct	s_fdf
 	void	*mlx;
 	void	*win;
 	int		color;
-	int		unit;
-	int		bump;
+	double	unit;
+	double	bump;
+	double	tilt;
+	int		move_unit;
 
 	int		pal_i;
 	int		pal_j;
@@ -101,7 +104,7 @@ void	plot_line_low(t_fdf *fdf, t_line line)
 	x = line.o.x;
 
 	index = 0;
-	while (x < line.d.x)
+	while (x <= line.d.x)
 	{
 		(void)mlx_pixel_put(fdf->mlx, fdf->win, x, y, line.color);
 		index += 1;
@@ -141,7 +144,7 @@ void	plot_line_high(t_fdf *fdf, t_line line)
 	x = line.o.x;
 
 	index = 0;
-	while (y < line.d.y)
+	while (y <= line.d.y)
 	{
 		(void)mlx_pixel_put(fdf->mlx, fdf->win, x, y, line.color);
 		index += 1;
@@ -237,12 +240,13 @@ void	draw_z_axis(t_fdf *fdf)
 
 void	draw_matrix(t_fdf *fdf)
 {
+#define	SCALE 2
 	t_line	line;
 	int		i;
 	int		j;
 	t_coord	c;
-	t_coord b;
-	int		unit;
+//	t_coord b;
+	double	unit;
 //	int		tmp;
 
 	line.color = get_palette_index(fdf->pal_i);//0x0074d9;//0xffff00;
@@ -252,7 +256,7 @@ void	draw_matrix(t_fdf *fdf)
 
 	c.x = fdf->o.x;
 	c.y = fdf->o.y;
-	b = c;
+//	b = c;
 //	int tmp;
 	while (i < fdf->rows)
 	{
@@ -263,12 +267,12 @@ void	draw_matrix(t_fdf *fdf)
 
 
 			line.o = c;
-			line.o.y = fdf->o.y + ((unit / 2) * i); 
+			line.o.y = fdf->o.y + ((unit / fdf->tilt) * i); 
 			line.o.y -= (fdf->matrix[i * fdf->columns + j]) * fdf->bump;
 
 
 			line.d.x = c.x + unit;
-			line.d.y = fdf->o.y + ((unit / 2) * i);
+			line.d.y = fdf->o.y + ((unit / fdf->tilt) * i);
 
 			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * fdf->bump;
 			plot_line(fdf, line);
@@ -277,14 +281,14 @@ void	draw_matrix(t_fdf *fdf)
 			j++;
 		}
 		i++;
-		c.x = fdf->o.x - ((unit / 2) * i);
+		c.x = fdf->o.x - ((unit / fdf->tilt) * i);
 	}
 
 	i = 0;
 	line.color = get_palette_index(fdf->pal_j);
 	c.x = fdf->o.x;
 	c.y = fdf->o.y;
-	b = c;
+//	b = c;
 	while (i < fdf->columns)
 	{
 		j = 0;
@@ -295,15 +299,14 @@ void	draw_matrix(t_fdf *fdf)
 		
 			line.o = c;
 			
-			line.d.x = c.x - (unit / 2);
-//			line.d.x += (fdf->matrix[i * fdf->rows + j]) * 3;
-			line.d.y = c.y + (unit / 2); // + (j * unit);
+			line.d.x = c.x - (unit / fdf->tilt);
+			line.d.y = c.y + (unit / fdf->tilt);
 			line.o.y -= (fdf->matrix[i + (fdf->columns * j )]) * fdf->bump;
 			line.d.y -= (fdf->matrix[i + (fdf->columns * (j + 1))]) * fdf->bump;
 
 			plot_line(fdf, line);
 
-			line.d.y = c.y + (unit / 2); 
+			line.d.y = c.y + (unit / fdf->tilt); 
 //			(void)mlx_pixel_put(fdf->mlx, fdf->win, line.d.x, line.d.y, 0xff0000);
 //			b.x -= (unit / 2);
 
@@ -322,6 +325,17 @@ void	draw_matrix(t_fdf *fdf)
 		c.y = fdf->o.y;// + ((unit / 2) * i);
 
 	}
+
+	char myfloat[50];
+	sprintf(myfloat, "tilt %f", fdf->tilt);
+	mlx_string_put(fdf->mlx, fdf->win, 10, 20, 0xffffff, myfloat); 
+	sprintf(myfloat, "unit %f", unit);
+	mlx_string_put(fdf->mlx, fdf->win, 10, 35, 0xffffff, myfloat); 
+	sprintf(myfloat, "bump %f", fdf->bump);
+	mlx_string_put(fdf->mlx, fdf->win, 10, 50, 0xffffff, myfloat); 
+
+
+
 
 
 
@@ -345,10 +359,12 @@ void	init_coordinates(t_fdf *fdf)
 
 	fdf->z.x = fdf->o.x;
 	fdf->z.y = fdf->o.y - (HEIGHT / 2);
-	fdf->unit = 10;
-	fdf->bump = 17;
+	fdf->unit = 10.0;
+	fdf->bump = 0.01;
+	fdf->tilt = 2.0;
 	fdf->pal_i = 1;
 	fdf->pal_j = 8;
+	fdf->move_unit = HEIGHT / 10;
 }
 
 
@@ -390,17 +406,39 @@ void	zoom_redraw(t_fdf *fdf, int value)
 	redraw(fdf);
 }
 
-void	bump_redraw(t_fdf *fdf, int value)
+void	bump_redraw(t_fdf *fdf, double value)
 {
 	fdf->bump += value;
 	redraw(fdf);
 }
+
+void	tilt_redraw(t_fdf *fdf, double value)
+{
+	fdf->tilt += value;
+	redraw(fdf);
+}
+
 
 void	palette_redraw(t_fdf *fdf, int *index)
 {
 	(*index) += 1;
 	redraw(fdf);
 }
+
+void	move_on_y_axis(t_fdf *fdf, int value)
+{
+		fdf->o.y += value;
+		(void)mlx_clear_window(fdf->mlx, fdf->win);
+		draw_matrix(fdf);
+}
+
+void	move_on_x_axis(t_fdf *fdf, int value)
+{
+		fdf->o.x += value;
+		(void)mlx_clear_window(fdf->mlx, fdf->win);
+		draw_matrix(fdf);
+}
+
 
 int	key_hook(int keycode, t_fdf *fdf)
 {
@@ -423,13 +461,29 @@ int	key_hook(int keycode, t_fdf *fdf)
 		draw_matrix(fdf);
 
 	if (keycode == KEY_I)
-		zoom_redraw(fdf, 1);
+		zoom_redraw(fdf, (double)1.0);
 	if (keycode == KEY_O)
-		zoom_redraw(fdf, -1);
+		zoom_redraw(fdf, (double)-1.0);
 	if (keycode == KEY_J)
-		bump_redraw(fdf, 1);
+		bump_redraw(fdf, (double)0.1);
 	if (keycode == KEY_K)
-		bump_redraw(fdf, -1);
+		bump_redraw(fdf, (double)-0.1);
+
+	if (keycode == KEY_T)
+		tilt_redraw(fdf, (double)0.1);
+	if (keycode == KEY_Y)
+		tilt_redraw(fdf, (double)-0.1);
+
+	if (keycode == KEY_UP)
+		move_on_y_axis(fdf, fdf->move_unit);
+	if (keycode == KEY_DOWN)
+		move_on_y_axis(fdf, -fdf->move_unit);
+	if (keycode == KEY_RIGHT)
+		move_on_x_axis(fdf, -fdf->move_unit);
+	if (keycode == KEY_LEFT)
+		move_on_x_axis(fdf, fdf->move_unit);
+
+
 	if (keycode == KEY_Z)
 		palette_redraw(fdf, &(fdf->pal_i));
 	if (keycode == KEY_X)
@@ -640,11 +694,11 @@ int	main(int ac, char **av)
 		fatal_error("ft_memalloc() failed");
 	fdf->file = av[1];
 	(void)read_matrix(fdf);
-	(void)print_matrix(fdf);
+//	(void)print_matrix(fdf);
 	(void)init_coordinates(fdf);
 	if ((fdf->mlx = mlx_init()) == NULL)
 		fatal_error("mlx_init() failed");
-	mlx_do_key_autorepeatoff(fdf->mlx);
+	mlx_do_key_autorepeaton(fdf->mlx);
 //	mlx_do_sync(fdf->mlx);
 
 	if ((fdf->win = mlx_new_window(fdf->mlx, WIDTH, HEIGHT, TITLE)) == NULL)

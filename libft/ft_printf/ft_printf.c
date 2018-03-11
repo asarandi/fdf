@@ -44,7 +44,7 @@ int		main_routine(const char *restrict *format, va_list *ap, int written)
 	parse_placeholder(&fmt, ap, &placeholder);
 	if (placeholder.char_count == 0)
 		placeholder.char_count = ft_strlen((char *)placeholder.output);
-	write(1, placeholder.output, placeholder.char_count);
+	(void)(write(1, placeholder.output, placeholder.char_count) + 1);
 	free(placeholder.output);
 	invalid_skip_forward(&fmt, &placeholder);
 	(*format) = (char *)fmt;
@@ -80,8 +80,7 @@ int		ft_printf(const char *restrict format, ...)
 			count += main_routine(&format, &ap, count);
 		else if (*format)
 		{
-			write(1, format++, 1);
-			count++;
+			count += write(1, format++, 1);
 		}
 	}
 	va_end(ap);
