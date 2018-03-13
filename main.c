@@ -6,7 +6,7 @@
 /*   By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/08 03:06:53 by asarandi          #+#    #+#             */
-/*   Updated: 2018/03/10 11:00:08 by asarandi         ###   ########.fr       */
+/*   Updated: 2018/03/13 13:37:57 by asarandi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,13 @@
 #define TITLE				"fdf @ 42"
 #define INT_SEPARATOR		' '
 #define	COLOR_SEPARATOR		','
+#define	ZOOM_INCREMENT		1.0
+#define ALT_INCREMENT		0.1
+#define TILT_INCREMENT		0.1
+#define AXIS_LENGTH			250
+#define DEFAULT_COLOR		0xffffff
+#define TEXT_COLOR			0xffffff
+
 
 #define ABS(n)	((n) > 0 ? (n) : -(n))
 
@@ -33,13 +40,13 @@ typedef	struct	s_coord
 {
 	int	x;
 	int	y;
+	int color;
 }				t_coord;
 
 typedef	struct	s_line
 {
 	t_coord	o;
 	t_coord	d;
-	int		color;
 	int		unit;
 }				t_line;
 
@@ -57,6 +64,8 @@ typedef struct	s_fdf
 	double	bump;
 	double	tilt;
 	int		move_unit;
+	int		highest;
+	int		lowest;
 
 	int		pal_i;
 	int		pal_j;
@@ -79,6 +88,87 @@ int		get_palette_index(int index)
 	index = index % pal_size;
 	return (palette[index]);
 }
+
+
+
+void	swap_int(int *a, int *b)
+{
+	int tmp;
+
+	tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
+
+
+//
+// if origin > destination, result should be origin - (delta / steps * index)
+// if origin < destination, result should be origin + (delta / steps * index)
+//
+
+int		gradient_calc(int org, int dest, int steps, int i)
+{
+	int unit;
+	int result;
+
+//	while (steps > 255)
+//		steps = 127;
+	unit = ABS(org - dest) / steps;
+//	if ((steps > 255) && (org != dest))
+//		unit = 2;
+	result = org;
+	if (org > dest)
+		result -= (unit * i);
+	if (org < dest)
+		result += (unit * i);
+	return (result & 0xff);
+}
+
+int		x_grad(t_line line, int i)
+{
+	int	steps;
+	int	oc;
+	int	dc;
+	int result;
+
+	steps = ABS(line.d.x - line.o.x);
+	i -= line.o.x;
+	oc = line.o.color;
+	dc = line.d.color;
+	result = gradient_calc((oc >> 16) & 0xff, (dc >> 16) & 0xff, steps, i);
+	result <<= 8;
+	result += gradient_calc((oc >> 8) & 0xff, (dc >> 8) & 0xff, steps, i);
+	result <<= 8;
+	result += gradient_calc(oc & 0xff, dc & 0xff, steps, i);
+	return (result);
+}
+
+int		y_grad(t_line line, int i)
+{
+	int	steps;
+	int	oc;
+	int	dc;
+	int result;
+
+	steps = ABS(line.d.y - line.o.y);
+	i -= line.o.y;
+	oc = line.o.color;
+	dc = line.d.color;
+	result = gradient_calc((oc >> 16) & 0xff, (dc >> 16) & 0xff, steps, i);
+	result <<= 8;
+	result += gradient_calc((oc >> 8) & 0xff, (dc >> 8) & 0xff, steps, i);
+	result <<= 8;
+	result += gradient_calc(oc & 0xff, dc & 0xff, steps, i);
+	return (result);
+}
+
+
+
+
+
+
+
+
 
 void	plot_line_low(t_fdf *fdf, t_line line)
 {
@@ -104,9 +194,9 @@ void	plot_line_low(t_fdf *fdf, t_line line)
 	x = line.o.x;
 
 	index = 0;
-	while (x <= line.d.x)
+	while (x < line.d.x)
 	{
-		(void)mlx_pixel_put(fdf->mlx, fdf->win, x, y, line.color);
+		(void)mlx_pixel_put(fdf->mlx, fdf->win, x, y, x_grad(line, x));
 		index += 1;
 		if (d > 0)
 		{
@@ -144,9 +234,9 @@ void	plot_line_high(t_fdf *fdf, t_line line)
 	x = line.o.x;
 
 	index = 0;
-	while (y <= line.d.y)
+	while (y < line.d.y)
 	{
-		(void)mlx_pixel_put(fdf->mlx, fdf->win, x, y, line.color);
+		(void)mlx_pixel_put(fdf->mlx, fdf->win, x, y, y_grad(line, y));
 		index += 1;
 		if (d > 0)
 		{
@@ -170,7 +260,7 @@ void	plot_line(t_fdf *fdf, t_line line)
 
 	if (ABS(line.d.y - line.o.y) < ABS(line.d.x - line.o.x))
 	{
-		if (line.o.x > line.d.x)
+		if (line.o.x >= line.d.x)
 		{
 			tmp = line.o;
 			line.o = line.d;
@@ -197,14 +287,15 @@ void	plot_line(t_fdf *fdf, t_line line)
 
 
 
-
 void	draw_x_axis(t_fdf *fdf)
 {
 	t_line	line;
-	line.color = 0xff0000;
+	line.o.color = 0xff0000;
+	line.d.color = 0xffffff;
+
 	line.o.x = fdf->o.x;
 	line.o.y = fdf->o.y;
-	line.d.x = fdf->o.x + WIDTH / 2;
+	line.d.x = fdf->o.x + AXIS_LENGTH;
 	line.d.y = fdf->o.y;
 	plot_line(fdf, line);
 	return ;
@@ -213,11 +304,13 @@ void	draw_x_axis(t_fdf *fdf)
 void	draw_y_axis(t_fdf *fdf)
 {
 	t_line	line;
-	line.color = 0xff00;
+	line.o.color = 0xff00;
+	line.d.color = 0xffffff;
+
 	line.o.x = fdf->o.x;
 	line.o.y = fdf->o.y;
-	line.d.x = fdf->o.x - WIDTH / 2;
-	line.d.y = fdf->o.y + HEIGHT / 2;
+	line.d.x = fdf->o.x - (AXIS_LENGTH / fdf->tilt);
+	line.d.y = fdf->o.y + (AXIS_LENGTH / fdf->tilt);
 	plot_line(fdf, line);
 	return ;
 }
@@ -225,11 +318,13 @@ void	draw_y_axis(t_fdf *fdf)
 void	draw_z_axis(t_fdf *fdf)
 {
 	t_line	line;
-	line.color = 0xff;
+	line.o.color = 0xff;
+	line.d.color = 0xffffff;
+
 	line.o.x = fdf->o.x;
 	line.o.y = fdf->o.y;
 	line.d.x = fdf->o.x;
-	line.d.y = fdf->o.y - HEIGHT / 2;
+	line.d.y = fdf->o.y - AXIS_LENGTH;
 	plot_line(fdf, line);
 	return ;
 }
@@ -237,10 +332,58 @@ void	draw_z_axis(t_fdf *fdf)
 
 
 
+void	draw_natrix(t_fdf *fdf)
+{
+	t_line	line;
+	int		i;
+	int		j;
+	t_coord	c;
+	double	unit;
+
+//	line.o.color = get_palette_index(fdf->pal_i);
+	i = 0;
+	unit = fdf->unit;
+
+	c.x = fdf->o.x;
+	c.y = fdf->o.y;
+
+	if ((fdf->tilt == 0) || (fdf->tilt == 0.0))
+		fdf->tilt = (double)-0.1;
+	while (i < fdf->rows)
+	{
+		j = 0;
+		while (j < fdf->columns - 1)
+		{
+			line.o = c;
+			line.o.y = fdf->o.y + ((unit / fdf->tilt) * i); 
+			line.o.y -= (fdf->matrix[i * fdf->columns + j]) * fdf->bump;
+			line.o.color = fdf->colors[i * fdf->columns + j];
+
+
+			mlx_pixel_put(fdf->mlx, fdf->win, line.o.x, line.o.y, line.o.color);
+
+			line.d.x = c.x + unit;
+			line.d.y = fdf->o.y + ((unit / fdf->tilt) * i);
+
+			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * fdf->bump;
+			line.d.color = fdf->colors[i * fdf->columns + j + 1];
+			if (j + 1 >= fdf->columns - 1)
+				mlx_pixel_put(fdf->mlx, fdf->win, line.d.x, line.d.y, line.d.color);
+
+
+			c = line.d;
+			j++;
+		}
+		i++;
+		c.x = fdf->o.x - ((unit / fdf->tilt) * i);
+	}
+}
+
+
+
 
 void	draw_matrix(t_fdf *fdf)
 {
-#define	SCALE 2
 	t_line	line;
 	int		i;
 	int		j;
@@ -249,32 +392,44 @@ void	draw_matrix(t_fdf *fdf)
 	double	unit;
 //	int		tmp;
 
-	line.color = get_palette_index(fdf->pal_i);//0x0074d9;//0xffff00;
+	line.o.color = get_palette_index(fdf->pal_i);//0x0074d9;//0xffff00;
 	i = 0;
 	unit = fdf->unit;
 //	unit = 10;
 
 	c.x = fdf->o.x;
 	c.y = fdf->o.y;
+
+	t_line	*mat2 = ft_memalloc((fdf->rows * fdf->columns + 1) * sizeof(t_line));
 //	b = c;
 //	int tmp;
+	if ((fdf->tilt == 0) || (fdf->tilt == 0.0))
+		fdf->tilt = (double)0.1;
 	while (i < fdf->rows)
 	{
 		j = 0;
+//		ft_printf("RUN1: c.x = %d, c.y = %d\n", c.x, c.y);
 		while (j < fdf->columns - 1)
 		{
-//			ft_printf("RUN 1#  i = %d, j = %d, matrix[i][j] = %d\n", i, j, fdf->matrix[i * fdf->columns + j]);
+//			if ((i == 0) && (j == 0))
+//				ft_printf("RUN 1#  i = %d, j = %d, matrix[i][j] = %d\n", i, j, fdf->matrix[i * fdf->columns + j]);
 
 
 			line.o = c;
+
 			line.o.y = fdf->o.y + ((unit / fdf->tilt) * i); 
 			line.o.y -= (fdf->matrix[i * fdf->columns + j]) * fdf->bump;
+			line.o.color = fdf->colors[i * fdf->columns + j];
 
 
 			line.d.x = c.x + unit;
 			line.d.y = fdf->o.y + ((unit / fdf->tilt) * i);
 
 			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * fdf->bump;
+			line.d.color = fdf->colors[i * fdf->columns + j + 1];
+
+			mat2[i * fdf->columns + j ] = line;
+
 			plot_line(fdf, line);
 
 			c = line.d;
@@ -283,7 +438,7 @@ void	draw_matrix(t_fdf *fdf)
 		i++;
 		c.x = fdf->o.x - ((unit / fdf->tilt) * i);
 	}
-
+/*
 	i = 0;
 	line.color = get_palette_index(fdf->pal_j);
 	c.x = fdf->o.x;
@@ -292,64 +447,141 @@ void	draw_matrix(t_fdf *fdf)
 	while (i < fdf->columns)
 	{
 		j = 0;
+		ft_printf("RUN2: c.x = %d, c.y = %d\n", c.x, c.y);
+
 		while (j < fdf->rows - 1)
 		{
 //			ft_printf("RUN 2#  i = %d, j = %d, matrix[i][j] = %d\n", i, j, fdf->matrix[i + (fdf->columns * j)]);
-
 		
 			line.o = c;
-			
-			line.d.x = c.x - (unit / fdf->tilt);
-			line.d.y = c.y + (unit / fdf->tilt);
+			line.d.x = c.x - (double)(unit / fdf->tilt);
+			line.d.y = c.y + (double)(unit / fdf->tilt);
 			line.o.y -= (fdf->matrix[i + (fdf->columns * j )]) * fdf->bump;
-			line.d.y -= (fdf->matrix[i + (fdf->columns * (j + 1))]) * fdf->bump;
-
+			line.d.y -= (fdf->matrix[i + (fdf->columns * (j + 1) )]) * fdf->bump;
 			plot_line(fdf, line);
-
 			line.d.y = c.y + (unit / fdf->tilt); 
-//			(void)mlx_pixel_put(fdf->mlx, fdf->win, line.d.x, line.d.y, 0xff0000);
-//			b.x -= (unit / 2);
-
 			c = line.d;
 			j++;
 		}
 		i++;
-
-
-//		line.o = b;
-//		line.d.x = fdf->o.x - ((unit / 2) * i);
-//		line.d.y = fdf->o.y + ((unit / 2) * i);
-//		plot_line(fdf, line);
-//		b = line.d;
-		c.x = fdf->o.x + (unit * i);
+		c.x = fdf->o.x + (unit  * i);
 		c.y = fdf->o.y;// + ((unit / 2) * i);
 
 	}
+*/
+
+//	line.color = get_palette_index(fdf->pal_j);
+	i = 0;
+	while (i < fdf->columns)
+	{
+		j = 0;
+		while (j < fdf->rows - 1)
+		{
+			line.o = mat2[i + (fdf->columns * j)].o;
+			line.o.color = fdf->colors[i + (fdf->columns * j)];
+			line.d = mat2[i + (fdf->columns * (j + 1))].o;
+			line.d.color = fdf->colors[i + (fdf->columns * (j + 1))];
+			plot_line(fdf, line);
+			j++;
+		}
+		i++;
+	}
+
+	i = fdf->columns - 2;
+	j = 0;
+	while (j < fdf->rows - 1)
+	{
+		line.o = mat2[i + (fdf->columns * j)].d;
+		line.o.color = fdf->colors[i + (fdf->columns * j)];
+		line.d = mat2[i + (fdf->columns * (j + 1))].d;
+		line.d.color = fdf->colors[i + (fdf->columns * (j + 1))];
+		plot_line(fdf, line);
+		j++;
+	}
+
+
+	free(mat2);
 
 	char myfloat[50];
 	sprintf(myfloat, "tilt %f", fdf->tilt);
-	mlx_string_put(fdf->mlx, fdf->win, 10, 20, 0xffffff, myfloat); 
+	mlx_string_put(fdf->mlx, fdf->win, 10, 20, TEXT_COLOR, myfloat); 
 	sprintf(myfloat, "unit %f", unit);
-	mlx_string_put(fdf->mlx, fdf->win, 10, 35, 0xffffff, myfloat); 
+	mlx_string_put(fdf->mlx, fdf->win, 10, 35, TEXT_COLOR, myfloat); 
 	sprintf(myfloat, "bump %f", fdf->bump);
-	mlx_string_put(fdf->mlx, fdf->win, 10, 50, 0xffffff, myfloat); 
-
-
-
-
-
-
-
-
+	mlx_string_put(fdf->mlx, fdf->win, 10, 50, TEXT_COLOR, myfloat); 
 
 	return ;
 }
 
+/*
+ *  screen width - 20% (for space) / number of rows
+ *  screen height - 20% (for space) / number of columns
+ *
+ *
+ *
+ * (number of columns - 1) * unit_size = screen width
+ *
+ * screen width / (number of columns - 1) = unit size
+ *
+ *
+ *
+ *
+ *  (number of rows - 1) * unit_size = screen height
+ *  screen height / (number of rows - 1) = unit size
+ *
+ *
+ *
+ *
+ * (number of rows - 1) * (unit_size / 2)
+ *
+ *
+ *
+ * width * 2 = 2732 
+ * div 10 = 273.2
+ * mul 9 = 2457 (total width available)
+ * max unit size = 2457 / ((columns - 1) + ((rows-1) / 2))
+ *
+ */
+
+
+void	calc_unit_size(t_fdf *fdf)
+{
+	int	tmp1;
+	int	tmp2;
+	int max_x;
+	int max_y;
+
+	tmp1 = ((WIDTH) / 10) * 9; //max drawable on x axis
+	tmp2 = ((fdf->columns - 1) * 2) + (fdf->rows - 1);
+	max_x = tmp1 / tmp2;
+
+	tmp1 = ((HEIGHT) / 10) * 9; //max drawable on y axis;
+	tmp2 = (fdf->rows - 1);
+	max_y = tmp1 / tmp2;
+
+//	tmp2 = (((HEIGHT * 2) / 10) * 9) / (fdf->rows - 1); //max height of row
+//	tmp1 = (((WIDTH * 1) / 10) * 9) / ((fdf->columns - 1) + ((fdf->rows - 1) / 2));
+	if (max_y < max_x)
+		max_x = max_y;
+	max_x -= (max_x % 2);
+	if (max_x < 1)
+		max_x = 1;
+	fdf->unit = (double)(max_x * 2);
+
+	int x_area = max_x * (((fdf->columns - 1) * 2) + (fdf->rows - 1));
+	int y_area = max_x * (fdf->rows - 1);
+	fdf->o.x = (WIDTH - x_area) / 2;
+	fdf->o.x += y_area;
+	fdf->o.y = (HEIGHT - y_area) / 2;
+	//height of rows is same as offset to the left
+	// if width = 10, and height = 6, total width = 16
+
+}
 
 void	init_coordinates(t_fdf *fdf)
 {
-	fdf->o.x = WIDTH / 4;
-	fdf->o.y = HEIGHT / 4;
+/*	fdf->o.x = WIDTH / 10;
+	fdf->o.y = HEIGHT / 10;
 
 	fdf->x.x = fdf->o.x + (WIDTH / 2);
 	fdf->x.y = fdf->o.y; // + (HEIGHT / 2);
@@ -359,12 +591,18 @@ void	init_coordinates(t_fdf *fdf)
 
 	fdf->z.x = fdf->o.x;
 	fdf->z.y = fdf->o.y - (HEIGHT / 2);
+
+
 	fdf->unit = 10.0;
-	fdf->bump = 0.01;
+*/
+	calc_unit_size(fdf);
+	ft_printf("unit size is %f\n", fdf->unit);
+
+	fdf->bump = 0.002;
 	fdf->tilt = 2.0;
 	fdf->pal_i = 1;
 	fdf->pal_j = 8;
-	fdf->move_unit = HEIGHT / 10;
+	fdf->move_unit = HEIGHT / 20;
 }
 
 
@@ -415,6 +653,8 @@ void	bump_redraw(t_fdf *fdf, double value)
 void	tilt_redraw(t_fdf *fdf, double value)
 {
 	fdf->tilt += value;
+	if ((int)(fdf->tilt * 1000) == 0)
+		fdf->tilt = TILT_INCREMENT;
 	redraw(fdf);
 }
 
@@ -461,18 +701,18 @@ int	key_hook(int keycode, t_fdf *fdf)
 		draw_matrix(fdf);
 
 	if (keycode == KEY_I)
-		zoom_redraw(fdf, (double)1.0);
+		zoom_redraw(fdf, (double)ZOOM_INCREMENT);
 	if (keycode == KEY_O)
-		zoom_redraw(fdf, (double)-1.0);
+		zoom_redraw(fdf, (double)-ZOOM_INCREMENT);
 	if (keycode == KEY_J)
-		bump_redraw(fdf, (double)0.1);
+		bump_redraw(fdf, (double)ALT_INCREMENT);
 	if (keycode == KEY_K)
-		bump_redraw(fdf, (double)-0.1);
+		bump_redraw(fdf, (double)-ALT_INCREMENT);
 
 	if (keycode == KEY_T)
-		tilt_redraw(fdf, (double)0.1);
+		tilt_redraw(fdf, (double)TILT_INCREMENT);
 	if (keycode == KEY_Y)
-		tilt_redraw(fdf, (double)-0.1);
+		tilt_redraw(fdf, (double)-TILT_INCREMENT);
 
 	if (keycode == KEY_UP)
 		move_on_y_axis(fdf, fdf->move_unit);
@@ -611,19 +851,53 @@ void	get_matrix_size(t_fdf *fdf)
 	close(fd);
 }
 
+int		hexa_to_int(char *str)
+{
+	int	i;
+	int	r;
+
+	str = ft_strtolower(str);
+	if ((ft_isdigit(str[0])) && (str[1] != 'x'))
+		return (ft_atoi(str));
+	if ((str[0] != '0') || (str[1] != 'x'))
+		return (0xffffff);
+	r = 0;
+	i = 2;
+	while (str[i])
+	{
+		r = r << 4;
+		if (ft_isdigit(str[i]))
+			r += (str[i] - '0');
+		else if ((str[i] >= 'a') && (str[i] <= 'f'))
+			r += (10 + (str[i] - 'a'));
+		else
+			break ;
+		i++;
+	}
+	return (r);
+}
 
 
 void	parse_line_of_ints(t_fdf *fdf, int *i, char *line)
 {
 	char **split;
+	char *ptr;
 	int	k;
 
 	split = ft_strsplit(line, INT_SEPARATOR);
 	k = 0;
 	while (split[k] != NULL)
 	{
-		//implement parsing of color hex-codes into fdf->colors
-		fdf->matrix[(*i)++] = ft_atoi(split[k]);
+		if ((ptr = ft_strchr(split[k], COLOR_SEPARATOR)) != NULL)
+			fdf->colors[*i] = hexa_to_int(ptr + 1);
+		else
+			fdf->colors[*i] = DEFAULT_COLOR;
+		fdf->matrix[*i] = ft_atoi(split[k]);
+		if (fdf->matrix[*i] > fdf->highest)
+			fdf->highest = fdf->matrix[*i];
+		if (fdf->matrix[*i] < fdf->lowest)
+			fdf->lowest = fdf->matrix[*i];
+		(*i)++;
 		free(split[k++]);
 	}
 	free(split);
@@ -672,7 +946,7 @@ void	print_matrix(t_fdf *fdf)
 		j = 0;
 		while (j < fdf->columns)
 		{
-			ft_printf("%d", fdf->matrix[(i * fdf->columns) + j]);
+			ft_printf("%#08x", fdf->colors[(i * fdf->columns) + j]);
 			if (++j < fdf->columns)
 				ft_printf(" ");
 			else

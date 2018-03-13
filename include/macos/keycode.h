@@ -18,6 +18,8 @@
 # define KEY_Z		6
 # define KEY_X		7
 # define KEY_D		2
+# define KEY_T		17
+# define KEY_Y		16
 
 # define KEY_1		18
 # define KEY_2		19
