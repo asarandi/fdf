@@ -6,7 +6,7 @@
 /*   By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/08 03:06:53 by asarandi          #+#    #+#             */
-/*   Updated: 2018/03/13 13:37:57 by asarandi         ###   ########.fr       */
+/*   Updated: 2018/03/13 17:00:58 by asarandi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,8 @@
 #define TILT_INCREMENT		0.1
 #define AXIS_LENGTH			250
 #define DEFAULT_COLOR		0xffffff
-#define TEXT_COLOR			0xffffff
+#define TEXT_COLOR			0x60b942//0xc27d38	//vim orange
+						//	0x60b942	//vim green
 
 
 #define ABS(n)	((n) > 0 ? (n) : -(n))
@@ -597,8 +598,11 @@ void	init_coordinates(t_fdf *fdf)
 */
 	calc_unit_size(fdf);
 	ft_printf("unit size is %f\n", fdf->unit);
+	ft_printf("highest = %d\n", fdf->highest);
+	ft_printf("lowest = %d\n", fdf->lowest);
+	ft_printf("rows = %d, columns = %d\n", fdf->rows, fdf->columns);
 
-	fdf->bump = 0.002;
+	fdf->bump = 10.0;
 	fdf->tilt = 2.0;
 	fdf->pal_i = 1;
 	fdf->pal_j = 8;

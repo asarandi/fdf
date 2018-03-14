@@ -2,7 +2,7 @@ NAME	= fdf
 SRC		= main.c
 OBJ		= $(SRC:%.c=%.o)
 CC		= gcc
-FLAGS	= -Wall -Werror -Wextra -g
+FLAGS	= -Wall -Werror -Wextra -Ofast
 INC		= -I libft/ -I libft/ft_printf/
 LIB		= -L libft/ -lft
 
@@ -24,18 +24,18 @@ endif
 all: $(NAME)
 
 $(NAME):
-#	make -C libft/
-#	make -C $(MLX)
+	make -C libft/
+	make -C $(MLX)
 	$(CC) $(FLAGS) -c $(SRC) $(INC)
 	$(CC) $(FLAGS) $(OBJ) $(LIB) -o $(NAME)
 
 clean:
-#	make clean -C libft/
-#	make clean -C $(MLX)
+	make clean -C libft/
+	make clean -C $(MLX)
 	rm -rf $(OBJ)
 
 fclean: clean
-#	make fclean -C libft/
+	make fclean -C libft/
 	rm -rf $(NAME)
 
 re: fclean all
