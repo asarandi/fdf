@@ -2,7 +2,7 @@ NAME	= fdf
 SRC		= main.c
 OBJ		= $(SRC:%.c=%.o)
 CC		= gcc
-FLAGS	= -Wall -Werror -Wextra -Ofast
+FLAGS	= -Wall -Werror -Wextra -O3
 INC		= -I libft/ -I libft/ft_printf/
 LIB		= -L libft/ -lft
 
@@ -37,5 +37,10 @@ clean:
 fclean: clean
 	make fclean -C libft/
 	rm -rf $(NAME)
+
+rmfdf:
+	rm -rf $(NAME)
+
+again: rmfdf all
 
 re: fclean all

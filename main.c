@@ -6,7 +6,7 @@
 /*   By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/08 03:06:53 by asarandi          #+#    #+#             */
-/*   Updated: 2018/03/13 17:00:58 by asarandi         ###   ########.fr       */
+/*   Updated: 2018/03/15 16:19:55 by asarandi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,6 @@
 #define INT_SEPARATOR		' '
 #define	COLOR_SEPARATOR		','
 #define	ZOOM_INCREMENT		1.0
-#define ALT_INCREMENT		0.1
 #define TILT_INCREMENT		0.1
 #define AXIS_LENGTH			250
 #define DEFAULT_COLOR		0xffffff
@@ -58,20 +57,30 @@ typedef struct	s_fdf
 	int		columns;
 	int		*matrix;
 	int		*colors;
+	int		*colors2;
+	int		*heights;
+	int		heights_count;
+	int		colormap;
 	void	*mlx;
 	void	*win;
 	int		color;
 	double	unit;
 	double	bump;
 	double	tilt;
+	double	mirror;
+	double	alt_increment;
 	int		move_unit;
 	int		highest;
 	int		lowest;
+	int		x_area;
+	int		y_area;
 
 	int		pal_i;
 	int		pal_j;
 	int		disco;
+	int		cidx;
 	int		tick;
+	int		points;
 
 //	int		pal_size = sizeof(palette) / sizeof(int);
 
@@ -90,8 +99,40 @@ int		get_palette_index(int index)
 	return (palette[index]);
 }
 
+int		gpi(int index)
+{
+	int		palette[] = {0x001F3F, 0x0074D9, 0x7FDBFF, 0x39CCCC, 0x3D9970, 0x2ECC40, 0x01FF70, 0xFFDC00, 0xFF851B, 0xFF4136, 0xF012BE, 0xB10DC9, 0x85144B, 0xFFFFFF, 0xDDDDDD, 0xAAAAAA};
+	int		pal_size = sizeof(palette) / sizeof(int);
 
+	index = index % pal_size;
+	return (palette[index]);
+}
 
+void	make_palette(t_fdf *fdf)
+{
+	int	i;
+	int	j;
+
+	i = 0;
+	while (i < fdf->rows)
+	{
+		j = 0;
+		while (j < fdf->columns)
+		{
+			if (fdf->cidx == 0)
+				fdf->colors[(i * fdf->columns) + j] = gpi(fdf->pal_i);
+			else
+				fdf->colors[(i * fdf->columns) + j] = gpi(fdf->pal_j);
+			fdf->cidx ^= 1;
+			j++;
+		}
+		if (fdf->columns % 2 == 0)
+			fdf->cidx ^= 1;
+		i++;
+	}
+}
+
+/*
 void	swap_int(int *a, int *b)
 {
 	int tmp;
@@ -99,6 +140,170 @@ void	swap_int(int *a, int *b)
 	tmp = *a;
 	*a = *b;
 	*b = tmp;
+}
+
+void	bubble_sort(int *array, int size)
+{
+	int	i;
+	int	flag;
+
+	while (1)
+	{
+		i = 1;
+		flag = 0;
+		while (i < size - 1)
+		{
+			if (array[i - 1] > array[i])
+			{
+				flag = array[i];
+				array[i] = array[i - 1];
+				array[i - 1] = flag;
+				flag = 1;
+			}
+			i++;
+		}
+		if (flag == 0)
+			break ;
+	}
+}
+
+*/
+
+
+
+int	*merge(int *left, int ln, int *right, int rn)
+{
+	int i = 0;
+	int j = 0;
+	int k = 0;
+	int	*merged = NULL;
+
+	merged = ft_memalloc((ln + rn) * sizeof(int));
+	while ((i < ln) && (j < rn))
+	{
+		if (left[i] <= right[j])
+			merged[k++] = left[i++];
+		else
+			merged[k++] = right[j++];
+	}
+	while (i < ln)
+		merged[k++] = left[i++];
+	while (j < rn)
+		merged[k++] = right[j++];
+	i = 0;
+	while (i < ln + rn)
+	{
+		left[i] = merged[i];
+		i++;
+	}
+	free(merged);
+	merged = NULL;
+	return (left);
+}
+
+int	*merge_sort(int *arr, int n)
+{
+	if (n < 2)
+		return (arr);
+
+	int ln = n / 2;
+	int rn = n - ln;
+
+	merge_sort(&arr[0], ln);
+	merge_sort(&arr[ln], rn);
+	merge(&arr[0], ln,  &arr[ln], rn);
+	return (arr);
+}
+
+int	int_array_count_unique(int *array, int size)
+{
+	int i;
+	int result;
+	int current;
+
+	i = 0;
+	current = array[i];
+	result = 1;
+	while (i < size)
+	{
+		if (array[i] != current)
+		{
+			current = array[i];
+			result += 1;
+		}
+		i++;
+	}
+	return (result);
+}
+
+void int_array_copy_unique(int *dst, int *org, int size)
+{
+	int i;
+	int j;
+
+	i = 0;
+	j = 0;
+	dst[j++] = org[i];
+	while (i < size)
+	{
+		if (org[i] != dst[j - 1])
+			dst[j++] = org[i];
+		i++;
+	}
+	ft_printf("copied %d unique heights\n", j);
+	return ;
+}
+
+void	print_int_array(int *a, int size)
+{
+	int i = 0;
+	while (i < size)
+		ft_printf("%d ", a[i++]);
+	ft_printf("\n");
+}
+
+void	height_map(t_fdf *fdf)
+{
+	int	*copy;
+	int	size;
+
+	size = fdf->rows * fdf->columns;
+	copy = ft_memcpy(ft_memalloc((size + 1) * sizeof(int)), fdf->matrix, size * sizeof(int));
+	copy = merge_sort(copy, size);
+//	print_int_array(copy, size);
+	fdf->heights_count = int_array_count_unique(copy, size - 1);
+	ft_printf("counted %d uniques\n", fdf->heights_count);
+	fdf->heights = ft_memalloc((fdf->heights_count + 1) * sizeof(int));
+//	ft_memset(fdf->heights, 0xFFFFFF, fdf->heights_count);
+	(void)int_array_copy_unique(fdf->heights, copy, size - 1);
+	print_int_array(fdf->heights, fdf->heights_count);
+	free(copy);
+}
+
+void	height_palette(t_fdf *fdf)
+{
+	int	k;
+	int	i;
+	int	j;
+
+	k = 0;
+	while (k <= fdf->heights_count)
+	{
+		i = 0;
+		while (i < fdf->rows)
+		{
+			j = 0;
+			while (j < fdf->columns)
+			{
+				if (fdf->matrix[(i * fdf->columns) + j] == fdf->heights[k])
+					fdf->colors[(i * fdf->columns) + j] = gpi(fdf->pal_i);
+				j++;
+			}
+			i++;
+		}
+		fdf->pal_i++;
+		k++;
+	}
 }
 
 
@@ -332,8 +537,51 @@ void	draw_z_axis(t_fdf *fdf)
 
 
 
+char	*ftoa(char *buf, double d)
+{
+	int			i;
+	int			j;
+	long double	x;
+	char		*result;
 
-void	draw_natrix(t_fdf *fdf)
+	i = 20;
+	buf[i] = '.';
+	j = (int)d;
+	while (1)
+	{
+		buf[--i] = (j % 10) + '0';
+		j /= 10;
+		if (!j)
+			break ;
+	}
+	result = &buf[i];
+	i = 26;
+	buf[i--] = 0;
+	x = ((double)d - (double)(int)d) * 100000.0;
+	j = 4;
+	while (j--)
+	{
+		buf[--i] = (int)d % 10 + '0';
+		x /= 10.0;
+	}
+//	buf[i] = 0;
+	return (result);
+}
+
+
+void	display_info(t_fdf *fdf)
+{
+//	char buf[50];
+	char myfloat[50];
+	sprintf(myfloat, "tilt %f", fdf->tilt);
+	mlx_string_put(fdf->mlx, fdf->win, 10, 20, TEXT_COLOR, myfloat); 
+	sprintf(myfloat, "unit %f", fdf->unit);
+	mlx_string_put(fdf->mlx, fdf->win, 10, 35, TEXT_COLOR, myfloat); 
+	sprintf(myfloat, "bump %f", fdf->bump);
+	mlx_string_put(fdf->mlx, fdf->win, 10, 50, TEXT_COLOR, myfloat); 
+}
+
+void	draw_points(t_fdf *fdf)
 {
 	t_line	line;
 	int		i;
@@ -363,7 +611,7 @@ void	draw_natrix(t_fdf *fdf)
 
 			mlx_pixel_put(fdf->mlx, fdf->win, line.o.x, line.o.y, line.o.color);
 
-			line.d.x = c.x + unit;
+			line.d.x = c.x + (unit * fdf->mirror);
 			line.d.y = fdf->o.y + ((unit / fdf->tilt) * i);
 
 			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * fdf->bump;
@@ -378,12 +626,13 @@ void	draw_natrix(t_fdf *fdf)
 		i++;
 		c.x = fdf->o.x - ((unit / fdf->tilt) * i);
 	}
+	display_info(fdf);
 }
 
 
 
 
-void	draw_matrix(t_fdf *fdf)
+void	draw_lines(t_fdf *fdf)
 {
 	t_line	line;
 	int		i;
@@ -423,7 +672,7 @@ void	draw_matrix(t_fdf *fdf)
 			line.o.color = fdf->colors[i * fdf->columns + j];
 
 
-			line.d.x = c.x + unit;
+			line.d.x = c.x + (unit * fdf->mirror);
 			line.d.y = fdf->o.y + ((unit / fdf->tilt) * i);
 
 			line.d.y -= (fdf->matrix[i * fdf->columns + j + 1]) * fdf->bump;
@@ -502,16 +751,19 @@ void	draw_matrix(t_fdf *fdf)
 
 
 	free(mat2);
+	display_info(fdf);
 
-	char myfloat[50];
-	sprintf(myfloat, "tilt %f", fdf->tilt);
-	mlx_string_put(fdf->mlx, fdf->win, 10, 20, TEXT_COLOR, myfloat); 
-	sprintf(myfloat, "unit %f", unit);
-	mlx_string_put(fdf->mlx, fdf->win, 10, 35, TEXT_COLOR, myfloat); 
-	sprintf(myfloat, "bump %f", fdf->bump);
-	mlx_string_put(fdf->mlx, fdf->win, 10, 50, TEXT_COLOR, myfloat); 
 
 	return ;
+}
+
+
+void	draw_matrix(t_fdf *fdf)
+{
+	if (fdf->points == 1)
+		draw_points(fdf);
+	else
+		draw_lines(fdf);
 }
 
 /*
@@ -545,6 +797,47 @@ void	draw_matrix(t_fdf *fdf)
  */
 
 
+void	calc_position(t_fdf *fdf)
+{
+
+//	int	tmp1;
+//	int	tmp2;
+	int max_x;
+	int max_y;
+
+//	tmp1 = ((WIDTH) / 10) * 9; //max drawable on x axis
+	max_x = ((fdf->columns - 1) * 2) + (fdf->rows - 1);
+//	max_x = tmp1 / tmp2;
+
+//	tmp1 = ((HEIGHT) / 10) * 9; //max drawable on y axis;
+	max_y = (fdf->rows - 1);
+//	max_y = tmp1 / tmp2;
+
+	if (max_y < max_x)
+		max_x = max_y;
+	max_x -= (max_x % 2);
+	if (max_x < 1)
+		max_x = 1;
+//	fdf->unit = (double)(max_x * 2);
+
+
+	fdf->x_area = (((fdf->columns - 1) * (int)fdf->unit) + ((fdf->rows - 1) * (int)fdf->unit));
+	fdf->y_area = (int)(fdf->unit) * (fdf->rows - 1);
+
+//	if (fdf->mirror == 1)
+//		fdf->o.x += tmp;
+//	if (fdf->mirror == 0)
+//		fdf->o.x -= tmp;
+//	fdf->o.x += fdf->y_area;
+//	fdf->o.x += fdf->x_area;
+//	fdf->o.y = (HEIGHT - fdf->y_area) / 2;
+	//height of rows is same as offset to the left
+	// if width = 10, and height = 6, total width = 16
+
+}
+
+
+
 void	calc_unit_size(t_fdf *fdf)
 {
 	int	tmp1;
@@ -569,14 +862,24 @@ void	calc_unit_size(t_fdf *fdf)
 		max_x = 1;
 	fdf->unit = (double)(max_x * 2);
 
-	int x_area = max_x * (((fdf->columns - 1) * 2) + (fdf->rows - 1));
-	int y_area = max_x * (fdf->rows - 1);
-	fdf->o.x = (WIDTH - x_area) / 2;
-	fdf->o.x += y_area;
-	fdf->o.y = (HEIGHT - y_area) / 2;
+	fdf->x_area = max_x * (((fdf->columns - 1) * 2) + (fdf->rows - 1));
+	fdf->y_area = max_x * (fdf->rows - 1);
+	fdf->o.x = (WIDTH - fdf->x_area) / 2;
+	fdf->o.x += fdf->y_area;
+//	fdf->o.x += x_area;
+	fdf->o.y = (HEIGHT - fdf->y_area) / 2;
 	//height of rows is same as offset to the left
 	// if width = 10, and height = 6, total width = 16
 
+}
+
+void	color_swap(t_fdf *fdf)
+{	
+	int	*ptr;
+
+	ptr = fdf->colors;
+	fdf->colors = fdf->colors2;
+	fdf->colors2 = ptr;
 }
 
 void	init_coordinates(t_fdf *fdf)
@@ -602,10 +905,17 @@ void	init_coordinates(t_fdf *fdf)
 	ft_printf("lowest = %d\n", fdf->lowest);
 	ft_printf("rows = %d, columns = %d\n", fdf->rows, fdf->columns);
 
-	fdf->bump = 10.0;
+//	fdf->bump = 1.0;
+	fdf->alt_increment = (double)fdf->unit / 20;
+	fdf->bump = fdf->alt_increment;
 	fdf->tilt = 2.0;
-	fdf->pal_i = 1;
-	fdf->pal_j = 8;
+	fdf->mirror = 1.0;
+	fdf->pal_i = 2;
+	fdf->pal_j = 9;
+	height_map(fdf);
+	color_swap(fdf);
+	make_palette(fdf);
+	color_swap(fdf);
 	fdf->move_unit = HEIGHT / 20;
 }
 
@@ -617,6 +927,10 @@ void clean_up(t_fdf *fdf)
 		free(fdf->matrix);
 	if (fdf->colors != NULL)
 		free(fdf->colors);
+	if (fdf->colors2 != NULL)
+		free(fdf->colors2);
+	if (fdf->heights != NULL)
+		free(fdf->heights);
 	free(fdf);
 	return ;
 }
@@ -645,6 +959,7 @@ void	redraw(t_fdf *fdf)
 void	zoom_redraw(t_fdf *fdf, int value)
 {
 	fdf->unit += value;
+	fdf->alt_increment = (double)fdf->unit / 20;
 	redraw(fdf);
 }
 
@@ -665,24 +980,76 @@ void	tilt_redraw(t_fdf *fdf, double value)
 
 void	palette_redraw(t_fdf *fdf, int *index)
 {
-	(*index) += 1;
-	redraw(fdf);
+	if (fdf->colormap == 1)
+	{
+		(*index) += 1;
+		make_palette(fdf);
+		redraw(fdf);
+	}
 }
 
 void	move_on_y_axis(t_fdf *fdf, int value)
 {
-		fdf->o.y += value;
-		(void)mlx_clear_window(fdf->mlx, fdf->win);
-		draw_matrix(fdf);
+	fdf->o.y += value;
+	(void)mlx_clear_window(fdf->mlx, fdf->win);
+	draw_matrix(fdf);
 }
 
 void	move_on_x_axis(t_fdf *fdf, int value)
 {
-		fdf->o.x += value;
-		(void)mlx_clear_window(fdf->mlx, fdf->win);
-		draw_matrix(fdf);
+	fdf->o.x += value;
+	(void)mlx_clear_window(fdf->mlx, fdf->win);
+	draw_matrix(fdf);
 }
 
+void	alternate_colors(t_fdf *fdf)
+{
+	color_swap(fdf);
+	fdf->colormap ^= 1;
+	redraw(fdf);
+}
+
+//mlx_hook(mlx_win_list_t *win_ptr, int x_event, int x_mask, int (*funct_ptr)(), void *param)
+
+int	key_repeat(int keycode, t_fdf *fdf)
+{
+	if (keycode == KEY_I)
+		zoom_redraw(fdf, (double)ZOOM_INCREMENT);
+	if (keycode == KEY_O)
+		zoom_redraw(fdf, (double)-ZOOM_INCREMENT);
+	if (keycode == KEY_J)
+		bump_redraw(fdf, (double)fdf->alt_increment);
+	if (keycode == KEY_K)
+		bump_redraw(fdf, (double)-fdf->alt_increment);
+
+	if (keycode == KEY_T)
+		tilt_redraw(fdf, (double)TILT_INCREMENT);
+	if (keycode == KEY_Y)
+		tilt_redraw(fdf, (double)-TILT_INCREMENT);
+
+	if ((keycode == KEY_V) && (fdf->colormap == 1))
+	{
+		fdf->disco = 0;
+		static int	tmp;
+		fdf->pal_i = tmp++;
+		height_palette(fdf);
+		redraw(fdf);
+	}
+
+
+
+
+	if (keycode == KEY_UP)
+		move_on_y_axis(fdf, fdf->move_unit);
+	if (keycode == KEY_DOWN)
+		move_on_y_axis(fdf, -fdf->move_unit);
+	if (keycode == KEY_RIGHT)
+		move_on_x_axis(fdf, -fdf->move_unit);
+	if (keycode == KEY_LEFT)
+		move_on_x_axis(fdf, fdf->move_unit);
+	return (0);
+
+}
 
 int	key_hook(int keycode, t_fdf *fdf)
 {
@@ -704,37 +1071,39 @@ int	key_hook(int keycode, t_fdf *fdf)
 	if (keycode == KEY_9)
 		draw_matrix(fdf);
 
-	if (keycode == KEY_I)
-		zoom_redraw(fdf, (double)ZOOM_INCREMENT);
-	if (keycode == KEY_O)
-		zoom_redraw(fdf, (double)-ZOOM_INCREMENT);
-	if (keycode == KEY_J)
-		bump_redraw(fdf, (double)ALT_INCREMENT);
-	if (keycode == KEY_K)
-		bump_redraw(fdf, (double)-ALT_INCREMENT);
-
-	if (keycode == KEY_T)
-		tilt_redraw(fdf, (double)TILT_INCREMENT);
-	if (keycode == KEY_Y)
-		tilt_redraw(fdf, (double)-TILT_INCREMENT);
-
-	if (keycode == KEY_UP)
-		move_on_y_axis(fdf, fdf->move_unit);
-	if (keycode == KEY_DOWN)
-		move_on_y_axis(fdf, -fdf->move_unit);
-	if (keycode == KEY_RIGHT)
-		move_on_x_axis(fdf, -fdf->move_unit);
-	if (keycode == KEY_LEFT)
-		move_on_x_axis(fdf, fdf->move_unit);
 
 
 	if (keycode == KEY_Z)
 		palette_redraw(fdf, &(fdf->pal_i));
 	if (keycode == KEY_X)
 		palette_redraw(fdf, &(fdf->pal_j));
-	if (keycode == KEY_D)
+	if ((keycode == KEY_D) && (fdf->colormap == 1))
 		fdf->disco ^= 1;
+	if (keycode == KEY_C)
+		alternate_colors(fdf);
+	if (keycode == KEY_P)
+	{
+		fdf->points ^= 1;
+		redraw(fdf);
+	}
+	if (keycode == KEY_M)
+	{
+		fdf->mirror = -(fdf->mirror);
+		calc_position(fdf);
+		if (fdf->mirror < 0)
+		{
+			fdf->o.x -= fdf->y_area;
+			fdf->o.x += fdf->x_area;
+		}
+		if (fdf->mirror > 0)
+		{
+			fdf->o.x += fdf->y_area;
+			fdf->o.x -= fdf->x_area;
+		}
 
+		redraw(fdf);
+
+	}
 
 
 
@@ -780,18 +1149,43 @@ int	loop_hook(t_fdf *fdf)
 //	if (fdf->color == 0x112233)	//spaghetti
 //		ft_printf("*mlx = %j, *win = %j\n", fdf->mlx, fdf->win);
 
-	if (fdf->disco == 1)
+	static	int	i = 0;
+//	static	int j = 0;
+	if ((fdf->disco == 1) && (fdf->colormap == 1))
 	{
 		fdf->tick += 1;
-		if (fdf->tick % 4181 == 0)
+		if (fdf->tick % 6311 == 0)
 		{
-			fdf->pal_i += 1;
-			redraw(fdf);
-		}
-		if (fdf->tick % 6765 == 0)
-		{
-			fdf->pal_j += 1;
-			redraw(fdf);
+			if (i == 1)
+				fdf->pal_i += 1;
+			else if (i == 3)
+				fdf->pal_j += 1;
+			if ((i == 1) || (i == 3))
+			{
+				make_palette(fdf);
+				redraw(fdf);
+				fdf->cidx ^= 1;
+			}
+			i++;
+			if (i == 5)
+				i = 0;
+		
+
+//			{
+//				fdf->cidx ^= 1;
+//				i ^= 1;
+//			}
+//			swap_colors(fdf);
+//			make_palette(fdf);
+//			redraw(fdf);
+//		}
+//		else if (fdf->tick % 48311 == 0)
+//		{
+//			fdf->pal_j += 1;
+//			make_palette(fdf);
+//			swap_colors(fdf);
+//			redraw(fdf);
+///			fdf->cidx ^= 1;
 		}
 	}
 
@@ -919,6 +1313,8 @@ void	get_matrix_content(t_fdf *fdf)
 		(void)fatal_error(strerror(errno));
 	fdf->matrix = ft_memalloc((fdf->rows * fdf->columns + 1) * sizeof(int));
 	fdf->colors = ft_memalloc((fdf->rows * fdf->columns + 1) * sizeof(int));
+	fdf->colors2 = ft_memalloc((fdf->rows * fdf->columns + 1) * sizeof(int));
+
 	i = 0;
 	while ((get_next_line(fd, &line)) == 1)
 	{
@@ -982,6 +1378,7 @@ int	main(int ac, char **av)
 	if ((fdf->win = mlx_new_window(fdf->mlx, WIDTH, HEIGHT, TITLE)) == NULL)
 		fatal_error("mlx_new_window() failed");
 
+	(void)mlx_hook(fdf->win, 2, 0, key_repeat, fdf);
 	(void)mlx_key_hook(fdf->win, key_hook, fdf);
 	(void)mlx_mouse_hook(fdf->win, mouse_hook, fdf);
 	(void)mlx_expose_hook(fdf->win, expose_hook, fdf);

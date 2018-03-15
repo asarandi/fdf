@@ -1,0 +1,4 @@
+-fix key auto repeat
+-generate color map based on altitude
+-calculate bump value and increment automatically depending on highest/lowest points and map size
+-norme
