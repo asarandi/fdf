@@ -2,7 +2,7 @@ NAME	= fdf
 SRC		= main.c
 OBJ		= $(SRC:%.c=%.o)
 CC		= gcc
-FLAGS	= -Wall -Werror -Wextra -O2
+FLAGS	= -Wall -Werror -Wextra -g
 INC		= -I libft/ -I libft/ft_printf/
 LIB		= -L libft/ -lft
 
@@ -19,7 +19,6 @@ ifeq ($(UNAME),Darwin)
 	INC += -I $(MLX) -I include/macos
 	LIB += -L $(MLX) -lmlx -framework OpenGL -framework AppKit
 endif
-
 
 all: $(NAME)
 
@@ -38,9 +37,9 @@ fclean: clean
 	make fclean -C libft/
 	rm -rf $(NAME)
 
-rmfdf:
+rmbin:
 	rm -rf $(NAME)
 
-again: rmfdf all
+again: rmbin all
 
 re: fclean all
