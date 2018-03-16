@@ -13,6 +13,10 @@
 #include <stdio.h>
 #include "fdf.h"
 
+#define KeyPressMask			(1L<<0)  
+#define KeyPress		2
+
+
 #define HEIGHT				768
 #define WIDTH				1366
 #define TITLE				"fdf @ 42"
@@ -984,7 +988,7 @@ void	palette_redraw(t_fdf *fdf, int *index)
 	{
 		(*index) += 1;
 		make_palette(fdf);
-		redraw(fdf);
+		draw_matrix(fdf);
 	}
 }
 
@@ -1006,7 +1010,7 @@ void	alternate_colors(t_fdf *fdf)
 {
 	color_swap(fdf);
 	fdf->colormap ^= 1;
-	redraw(fdf);
+	draw_matrix(fdf);
 }
 
 //mlx_hook(mlx_win_list_t *win_ptr, int x_event, int x_mask, int (*funct_ptr)(), void *param)
@@ -1033,7 +1037,7 @@ int	key_repeat(int keycode, t_fdf *fdf)
 		static int	tmp;
 		fdf->pal_i = tmp++;
 		height_palette(fdf);
-		redraw(fdf);
+		draw_matrix(fdf);
 	}
 
 
@@ -1378,7 +1382,7 @@ int	main(int ac, char **av)
 	if ((fdf->win = mlx_new_window(fdf->mlx, WIDTH, HEIGHT, TITLE)) == NULL)
 		fatal_error("mlx_new_window() failed");
 
-	(void)mlx_hook(fdf->win, 2, 0, key_repeat, fdf);
+	(void)mlx_hook(fdf->win, KeyPress, KeyPressMask, key_repeat, fdf);
 	(void)mlx_key_hook(fdf->win, key_hook, fdf);
 	(void)mlx_mouse_hook(fdf->win, mouse_hook, fdf);
 	(void)mlx_expose_hook(fdf->win, expose_hook, fdf);
