@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   keycode.h                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2018/03/16 18:53:08 by asarandi          #+#    #+#             */
+/*   Updated: 2018/03/16 18:53:16 by asarandi         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #ifndef KEYCODE_H
 # define KEYCODE_H
 
@@ -5,12 +17,10 @@
 # define KEY_RIGHT	124
 # define KEY_DOWN	125
 # define KEY_LEFT	123
-
 # define KEY_ENTER	36
 # define KEY_ESCAPE	53
 # define KEY_SPACE	49
 # define KEY_TAB	48
-
 # define KEY_I		34
 # define KEY_O		31
 # define KEY_J		38
@@ -25,7 +35,6 @@
 # define KEY_M		46
 # define KEY_V		9
 # define KEY_H		4
-
 # define KEY_1		18
 # define KEY_2		19
 # define KEY_3		20
