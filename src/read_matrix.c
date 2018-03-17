@@ -6,7 +6,7 @@
 /*   By: asarandi <asarandi@student.42.us.org>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/03/16 14:39:35 by asarandi          #+#    #+#             */
-/*   Updated: 2018/03/16 15:12:37 by asarandi         ###   ########.fr       */
+/*   Updated: 2018/03/16 21:19:23 by asarandi         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,5 +64,10 @@ void	read_matrix(t_fdf *fdf)
 {
 	get_matrix_size(fdf);
 	get_matrix_content(fdf);
+	if ((fdf->rows < 2) || (fdf->columns < 2))
+	{
+		clean_up(fdf);
+		fatal_error("map should have at least 2 rows, 2 columns");
+	}
 	return ;
 }

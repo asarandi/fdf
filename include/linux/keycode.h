@@ -34,6 +34,7 @@
 # define KEY_C		99
 # define KEY_P		112
 # define KEY_M		109
+# define KEY_H		104
 # define KEY_1		49
 # define KEY_2		50
 # define KEY_3		51
