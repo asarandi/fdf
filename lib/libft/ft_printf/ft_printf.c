@@ -28,7 +28,7 @@ void	invalid_skip_forward(char **fmt, t_placeholder *ph)
 	}
 }
 
-int		main_routine(const char *restrict *format, va_list *ap, int written)
+int		main_routine(const char **format, va_list *ap, int written)
 {
 	char			*fmt;
 	t_placeholder	placeholder;
@@ -51,7 +51,7 @@ int		main_routine(const char *restrict *format, va_list *ap, int written)
 	return (placeholder.char_count);
 }
 
-int		color_routine(const char *restrict *format)
+int		color_routine(const char **format)
 {
 	int	i;
 
@@ -65,7 +65,7 @@ int		color_routine(const char *restrict *format)
 	return (i);
 }
 
-int		ft_printf(const char *restrict format, ...)
+int		ft_printf(const char *format, ...)
 {
 	va_list	ap;
 	int		count;
